@@ -150,3 +150,5 @@ media/
 
 sent_emails/
 
+/blogicum/blog/view_1.py
+/blogicum/templates/
