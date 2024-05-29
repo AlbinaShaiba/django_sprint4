@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 
 from django.views.generic import (CreateView, DeleteView, DetailView,
-                                   ListView, UpdateView)
+                                  ListView, UpdateView)
 
 from django.shortcuts import get_object_or_404, render, redirect
 
@@ -20,14 +20,13 @@ from .models import Category, Comment, Post
 from .forms import CommentForm, PostForm, UserForm
 
 
-
-
 User = get_user_model()
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
-    """ Only logged in users can edit/delete
-    Without authentication redirect to blog:post_detail"""
+    """Only logged in users can edit/delete
+    Without authentication redirect to blog:post_detail
+    """
 
     pk_url_kwarg = 'post_id'
 
@@ -45,7 +44,7 @@ class OnlyAuthorMixin(UserPassesTestMixin):
 
 "User-model related view-functions and CBV-s"
 class ProfileDetailView(DetailView):
-    """ Profile detail"""
+    """Profile detail"""
 
     model = User
     template_name = 'blog/profile.html'
@@ -79,7 +78,8 @@ class ProfileDetailView(DetailView):
 
 @login_required
 def edit_profile(request):
-    """ View_function to edit profile"""
+    """View_function to edit profile"""
+
     username = request.user.username
     instance = get_object_or_404(User, username=username)
     form = UserForm(request.POST or None, instance=instance)
@@ -94,7 +94,8 @@ def edit_profile(request):
 
 "Post-model related view-functions and CBV-s"
 class PostListView(ListView):
-    """ CBV class to display homepage with published posts"""
+    """CBV class to display homepage with published posts"""
+
     model = Post
     template_name = 'blog/index.html'
 
@@ -113,7 +114,8 @@ class PostListView(ListView):
 
 
 class CreatePostView(LoginRequiredMixin, CreateView):
-    ''' CBV for creating posts '''
+    """CBV for creating posts"""
+
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -128,7 +130,8 @@ class CreatePostView(LoginRequiredMixin, CreateView):
 
 
 class UpdatePostView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
-    ''' CBV for updating posts  '''
+    """CBV for updating posts"""
+
     pk_url_kwarg = 'post_id'
     model = Post
     form_class = PostForm
@@ -145,7 +148,8 @@ class UpdatePostView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
 
 
 class DeletePostView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
-    ''' CBV for deleting post'''
+    """CBV for deleting post"""
+
     model = Post
     pk_url_kwarg = 'post_id'
     model = Post
@@ -158,7 +162,8 @@ class DeletePostView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
 
 
 def post_detail(request, post_id):
-    """ View-function to display post details and comments"""
+    """View-function to display post details and comments"""
+
     post_for_user = get_object_or_404(Post, id=post_id)
     if request.user.username == post_for_user.author.username:
         post = post_for_user
@@ -176,7 +181,8 @@ def post_detail(request, post_id):
 
 
 def category_posts(request, category_slug):
-    """ View-function to display all posts for a given category"""
+    """View-function to display all posts for a given category"""
+
     category = get_object_or_404(Category,
                                  slug=category_slug,
                                  is_published=True)
@@ -196,7 +202,8 @@ def category_posts(request, category_slug):
 
 "Comment-model related view-functions and CBV-s"
 class CommentCreateView(LoginRequiredMixin, CreateView):
-    """ CBV class to create comment"""
+    """CBV class to create comment"""
+
     pk_url_kwarg = 'post_id'
     model = Comment
     form_class = CommentForm
@@ -214,7 +221,8 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
 
 class UpdateCommentView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
-    ''' CBV for updating comments  '''
+    """CBV for updating comments"""
+
     pk_url_kwarg = 'comment_id'
     model = Comment
     form_class = CommentForm
@@ -241,7 +249,8 @@ class UpdateCommentView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
         return context
 
 class DeleteCommentView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
-    ''' CBV for deleting comments'''
+    """CBV for deleting comments"""
+
     pk_url_kwarg = 'comment_id'
     model = Comment
     form_class = CommentForm
