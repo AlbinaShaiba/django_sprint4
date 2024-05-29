@@ -185,7 +185,8 @@ def category_posts(request, category_slug):
                                  slug=category_slug,
                                  is_published=True)
     page_obj = count_comments(
-        get_published_posts(Post.objects).select_related('category', 'location')
+        get_published_posts(Post.objects)
+        .select_related('category', 'location')
         .filter(category__slug=category_slug)
         .order_by('-pub_date')
     )

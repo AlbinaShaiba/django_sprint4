@@ -58,8 +58,6 @@ class Location(PublishedModel):
         return self.name[:settings.TITLE_LEN]
 
 
-
-
 class Post(PublishedModel):
     """Post model"""
 
@@ -84,8 +82,9 @@ class Post(PublishedModel):
                                  null=True,
                                  verbose_name='Категория')
 
-
-    image = models.ImageField('Изображение', blank=True, upload_to='blogicum_images')
+    image = models.ImageField('Изображение',
+                              blank=True,
+                              upload_to='blogicum_images')
 
     class Meta:
         verbose_name = 'публикация'
@@ -107,7 +106,6 @@ class Comment(models.Model):
 
     created_at = models.DateTimeField('Добавлено',
                                       auto_now_add=True)
-
 
     post = models.ForeignKey(Post, related_name='comments',
                              on_delete=models.CASCADE,
