@@ -41,8 +41,9 @@ class OnlyAuthorMixin(UserPassesTestMixin):
         return redirect('blog:post_detail', self.kwargs['post_id'])
 
 
-
 "User-model related view-functions and CBV-s"
+
+
 class ProfileDetailView(DetailView):
     """Profile detail"""
 
@@ -50,17 +51,18 @@ class ProfileDetailView(DetailView):
     template_name = 'blog/profile.html'
 
     def get_object(self, queryset=None):
-        return get_object_or_404(User, username=self.kwargs['username'])
+        return get_object_or_404(User,
+                                 username=self.kwargs['username'])
 
     def get_queryset(self, queryset=None):
         if self.request.user == self.get_object():
             page_obj = count_comments(
-                Post.objects.filter(author=self.get_object().id).
-                                      order_by('-pub_date'))
+                Post.objects.filter(
+                    author=self.get_object().id).order_by('-pub_date'))
         else:
             page_obj = count_comments(get_published_posts(
-                Post.objects.filter(author=self.get_object().id).
-                order_by('-pub_date')))
+                Post.objects.filter(
+                    author=self.get_object().id).order_by('-pub_date')))
 
         page_obj = paginate_queryset(self.request,
                                      page_obj,
@@ -75,11 +77,9 @@ class ProfileDetailView(DetailView):
         return context
 
 
-
 @login_required
 def edit_profile(request):
     """View_function to edit profile"""
-
     username = request.user.username
     instance = get_object_or_404(User, username=username)
     form = UserForm(request.POST or None, instance=instance)
@@ -88,11 +88,13 @@ def edit_profile(request):
         form = form.save(commit=False)
         form.save()
         return redirect('blog:profile', author)
-    return render(request, 'blog/user.html', {'form': form })
+    return render(request, 'blog/user.html', {'form': form})
 
 
 
 "Post-model related view-functions and CBV-s"
+
+
 class PostListView(ListView):
     """CBV class to display homepage with published posts"""
 
@@ -182,7 +184,6 @@ def post_detail(request, post_id):
 
 def category_posts(request, category_slug):
     """View-function to display all posts for a given category"""
-
     category = get_object_or_404(Category,
                                  slug=category_slug,
                                  is_published=True)
@@ -201,6 +202,8 @@ def category_posts(request, category_slug):
 
 
 "Comment-model related view-functions and CBV-s"
+
+
 class CommentCreateView(LoginRequiredMixin, CreateView):
     """CBV class to create comment"""
 
@@ -245,8 +248,8 @@ class UpdateCommentView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
                                             pk=self.kwargs['post_id'])
         context['comment'] = get_object_or_404(Comment,
                                                pk=self.kwargs['comment_id'])
-
         return context
+
 
 class DeleteCommentView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
     """CBV for deleting comments"""

@@ -8,6 +8,7 @@ class AboutPageView(TemplateView):
 
     template_name = 'pages/about.html'
 
+
 class RulesPageView(TemplateView):
     """Returns project rules pages"""
 
@@ -16,17 +17,14 @@ class RulesPageView(TemplateView):
 
 def page_not_found(request, exception=None):
     """Page not found"""
-
     return render(request, 'pages/404.html', status=404)
 
 
 def csrf_failure(request, reason=''):
     """CSRF Failure"""
-
     return render(request, 'pages/403csrf.html', status=403)
 
 
 def server_error(request):
     """Server Error"""
-
     return render(request, 'pages/500.html', status=500)
