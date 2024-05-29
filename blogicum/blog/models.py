@@ -9,7 +9,8 @@ User = get_user_model()
 
 
 class PublishedModel(models.Model):
-    """ Base class for published models """
+    """Base class for published models"""
+
     is_published = models.BooleanField('Опубликовано',
                                        default=True,
                                        help_text=(
@@ -23,7 +24,8 @@ class PublishedModel(models.Model):
 
 
 class Category(PublishedModel):
-    """ Category model"""
+    """Category model"""
+
     title = models.CharField('Заголовок',
                              max_length=settings.MAX_LENGTH)
     description = models.TextField('Описание')
@@ -44,6 +46,7 @@ class Category(PublishedModel):
 
 class Location(PublishedModel):
     """Location model"""
+
     name = models.CharField('Название места',
                             max_length=settings.MAX_LENGTH)
 
@@ -58,7 +61,8 @@ class Location(PublishedModel):
 
 
 class Post(PublishedModel):
-    """ Post model"""
+    """Post model"""
+
     title = models.CharField('Заголовок',
                              max_length=settings.MAX_LENGTH)
     text = models.TextField('Текст')
@@ -92,7 +96,8 @@ class Post(PublishedModel):
 
 
 class Comment(models.Model):
-    """ Comment model"""
+    """Comment model"""
+
     title = models.CharField('Заголовок комментария',
                              max_length=settings.MAX_LENGTH)
     text = models.TextField('Текст комментария')

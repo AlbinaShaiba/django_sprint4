@@ -160,4 +160,4 @@ MAX_LENGTH = 256  # maximum number of characters
 
 TITLE_LEN = 15  # number of characters for titles
 
-PAGINATION_PER_PAGE = 10 # number of querysets for page
+PAGINATION_PER_PAGE = 10  # number of querysets for page

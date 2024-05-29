@@ -91,7 +91,6 @@ def edit_profile(request):
     return render(request, 'blog/user.html', {'form': form})
 
 
-
 "Post-model related view-functions and CBV-s"
 
 
@@ -139,7 +138,6 @@ class UpdatePostView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
     form_class = PostForm
     template_name = 'blog/create.html'
 
-
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
@@ -165,7 +163,6 @@ class DeletePostView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
 
 def post_detail(request, post_id):
     """View-function to display post details and comments"""
-
     post_for_user = get_object_or_404(Post, id=post_id)
     if request.user.username == post_for_user.author.username:
         post = post_for_user
@@ -187,10 +184,11 @@ def category_posts(request, category_slug):
     category = get_object_or_404(Category,
                                  slug=category_slug,
                                  is_published=True)
-    page_obj = count_comments(get_published_posts(
-        Post.objects).select_related('category', 'location').
-                              filter(category__slug=category_slug).
-                              order_by('-pub_date'))
+    page_obj = count_comments(
+        get_published_posts(Post.objects).select_related('category', 'location')
+        .filter(category__slug=category_slug)
+        .order_by('-pub_date')
+    )
     page_obj = paginate_queryset(request,
                                  page_obj,
                                  settings.PAGINATION_PER_PAGE)
@@ -230,7 +228,6 @@ class UpdateCommentView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
-
 
     def form_valid(self, form):
         form.instance.author = self.request.user
