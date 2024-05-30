@@ -1,5 +1,4 @@
 from django.urls import path
-
 from . import views
 
 
@@ -17,12 +16,14 @@ urlpatterns = [
     path('posts/<int:post_id>/delete_comment/<int:comment_id>/',
          views.DeleteCommentView.as_view(),
          name='delete_comment'),
-    path('posts/<int:post_id>/', views.post_detail, name='post_detail'),
-    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('posts/<int:post_id>/', views.PostDetailView.as_view(), name='post_detail'),
+    path('profile/edit/', views.EditProfileView.as_view(), 
+         name='edit_profile'),
     path('profile/<slug:username>/', views.ProfileDetailView.as_view(),
          name='profile'),
     path('category/<slug:category_slug>/',
-         views.category_posts, name='category_posts'),
+         views.CategoryPostsView.as_view(),
+         name='category_posts'),
     path('posts/create/', views.CreatePostView.as_view(), name='create_post'),
 
     path('', views.PostListView.as_view(), name='index'),

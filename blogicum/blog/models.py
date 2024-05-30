@@ -1,7 +1,5 @@
 from django.db import models
-
 from django.contrib.auth import get_user_model
-
 from django.conf import settings
 
 
@@ -116,4 +114,4 @@ class Comment(models.Model):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return self.title
+        return self.title[:settings.TITLE_LEN]

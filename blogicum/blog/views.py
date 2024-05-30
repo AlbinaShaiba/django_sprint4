@@ -1,47 +1,20 @@
 from django.conf import settings
-
 from django.contrib.auth import get_user_model
-
-from django.contrib.auth.decorators import login_required
-
-from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
-
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models.base import Model as Model
 from django.views.generic import (CreateView, DeleteView, DetailView,
                                   ListView, UpdateView)
-
-from django.shortcuts import get_object_or_404, render, redirect
-
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-
 from .utils import count_comments, get_published_posts, paginate_queryset
-
 from .models import Category, Comment, Post
-
-from .forms import CommentForm, PostForm, UserForm
-
+from .forms import CommentForm, PostForm
+from .mixins import CreateDeletePostMixin, CreateUpdateDeleteCommentMixin, OnlyAuthorMixin
 
 User = get_user_model()
 
 
-class OnlyAuthorMixin(UserPassesTestMixin):
-    """Only logged in users can edit/delete
-    Without authentication redirect to blog:post_detail
-    """
-
-    pk_url_kwarg = 'post_id'
-
-    def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-
-    def handle_no_permission(self):
-        return redirect('blog:post_detail', self.kwargs['post_id'])
-
-    def get_success_url(self):
-        return redirect('blog:post_detail', self.kwargs['post_id'])
-
-
-"User-model related view-functions and CBV-s"
+"User-model related CBV-s"
 
 
 class ProfileDetailView(DetailView):
@@ -77,21 +50,22 @@ class ProfileDetailView(DetailView):
         return context
 
 
-@login_required
-def edit_profile(request):
-    """View_function to edit profile"""
-    username = request.user.username
-    instance = get_object_or_404(User, username=username)
-    form = UserForm(request.POST or None, instance=instance)
-    author = request.user
-    if form.is_valid():
-        form = form.save(commit=False)
-        form.save()
-        return redirect('blog:profile', author)
-    return render(request, 'blog/user.html', {'form': form})
+class EditProfileView(LoginRequiredMixin, UpdateView):
+    """CBV to update profile"""
+
+    model = User
+    fields = ['username', 'first_name', 'last_name', 'email']
+    template_name = 'blog/user.html'
+
+    def get_object(self):
+        return self.request.user
+
+    def get_success_url(self):
+        return reverse_lazy('blog:profile',
+                            kwargs={'username': self.get_object()})
 
 
-"Post-model related view-functions and CBV-s"
+"Post-model related CBV-s"
 
 
 class PostListView(ListView):
@@ -114,20 +88,12 @@ class PostListView(ListView):
         return context
 
 
-class CreatePostView(LoginRequiredMixin, CreateView):
+class CreatePostView(LoginRequiredMixin, CreateDeletePostMixin, CreateView):
     """CBV for creating posts"""
-
-    model = Post
-    form_class = PostForm
-    template_name = 'blog/create.html'
 
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.request.user.username})
 
 
 class UpdatePostView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
@@ -142,74 +108,87 @@ class UpdatePostView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
         form.instance.author = self.request.user
         return super().form_valid(form)
 
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.kwargs['post_id']})
 
-
-class DeletePostView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
+class DeletePostView(LoginRequiredMixin, CreateDeletePostMixin, 
+                     OnlyAuthorMixin, DeleteView):
     """CBV for deleting post"""
+    
+    pk_url_kwarg = 'post_id'
+
+    
+class PostDetailView(DetailView):
+    """CBV to display post details"""
 
     model = Post
     pk_url_kwarg = 'post_id'
-    model = Post
-    form_class = PostForm
-    template_name = 'blog/create.html'
+    template_name = 'blog/detail.html'
+    
+    def get_form(self):
+        form = CommentForm(self.request.POST or None)
+        return form
 
-    def get_success_url(self):
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.request.user.username})
+    def get_object(self):
+        post_for_user = get_object_or_404(Post, id=self.kwargs['post_id'])
+        if self.request.user == post_for_user.author:
+            post = post_for_user
+        else:
+            post = get_object_or_404(get_published_posts(
+                Post.objects), id=self.kwargs['post_id'])
+        return post
 
-
-def post_detail(request, post_id):
-    """View-function to display post details and comments"""
-    post_for_user = get_object_or_404(Post, id=post_id)
-    if request.user.username == post_for_user.author.username:
-        post = post_for_user
-    else:
-        post = get_object_or_404(get_published_posts(
-            Post.objects),
-            id=post_id)
-    comments = (Comment.objects.filter(post=post).
+    def get_queryset(self):
+        comments = (Comment.objects.filter(post=self.get_object()).
                 order_by('created_at'))
-    form = CommentForm(request.POST or None)
-    context = {'post': post,
-               'form': form,
-               'comments': comments}
-    return render(request, 'blog/detail.html', context)
+        return comments
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['post'] = self.get_object()
+        context['comments'] = self.get_queryset()
+        context['form'] = self.get_form()
+        return context
 
 
-def category_posts(request, category_slug):
-    """View-function to display all posts for a given category"""
-    category = get_object_or_404(Category,
-                                 slug=category_slug,
+class CategoryPostsView(ListView):
+    """CBV displays published posts for a given category"""
+
+    model = Post
+    template_name = 'blog/category.html'
+    slug_url_kwarg = 'category_slug'
+
+    def get_object(self):
+        category = get_object_or_404(Category,
+                                 slug=self.kwargs['category_slug'],
                                  is_published=True)
-    page_obj = count_comments(
-        get_published_posts(Post.objects)
-        .select_related('category', 'location')
-        .filter(category__slug=category_slug)
-        .order_by('-pub_date')
-    )
-    page_obj = paginate_queryset(request,
+        return category
+    
+    def get_queryset(self):
+        page_obj = count_comments(
+            get_published_posts(Post.objects)
+            .select_related('category', 'location')
+            .filter(category__slug=self.kwargs['category_slug'])
+            .order_by('-pub_date')
+            )
+        page_obj = paginate_queryset(self.request,
                                  page_obj,
                                  settings.PAGINATION_PER_PAGE)
-    context = {
-        'category': category,
-        'page_obj': page_obj
-    }
-    return render(request, 'blog/category.html', context)
+        
+        return page_obj
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = self.get_object()
+        context['page_obj'] = self.get_queryset()
+        return context
+    
+
+"Comment-model related CBV-s"
 
 
-"Comment-model related view-functions and CBV-s"
-
-
-class CommentCreateView(LoginRequiredMixin, CreateView):
+class CommentCreateView(LoginRequiredMixin, CreateUpdateDeleteCommentMixin, CreateView):
     """CBV class to create comment"""
 
     pk_url_kwarg = 'post_id'
-    model = Comment
-    form_class = CommentForm
-    template_name = 'blog/detail.html'
 
     def form_valid(self, form):
         form.instance.author = self.request.user
@@ -217,28 +196,18 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
                                                pk=self.kwargs['post_id'])
         return super().form_valid(form)
 
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.kwargs['post_id']})
 
-
-class UpdateCommentView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
+class UpdateCommentView(LoginRequiredMixin, CreateUpdateDeleteCommentMixin, 
+                        OnlyAuthorMixin, UpdateView):
     """CBV for updating comments"""
 
     pk_url_kwarg = 'comment_id'
-    model = Comment
-    form_class = CommentForm
-    template_name = 'blog/comment.html'
-
+    
     def form_valid(self, form):
         form.instance.author = self.request.user
         form.instance.post = get_object_or_404(
             Post, pk=self.kwargs['post_id'])
         return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.kwargs['post_id']})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -249,17 +218,11 @@ class UpdateCommentView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
         return context
 
 
-class DeleteCommentView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
+class DeleteCommentView(LoginRequiredMixin, CreateUpdateDeleteCommentMixin, 
+                        OnlyAuthorMixin, DeleteView):
     """CBV for deleting comments"""
 
     pk_url_kwarg = 'comment_id'
-    model = Comment
-    form_class = CommentForm
-    template_name = 'blog/comment.html'
-
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.kwargs['post_id']})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
