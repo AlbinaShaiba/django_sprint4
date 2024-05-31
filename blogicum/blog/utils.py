@@ -1,15 +1,5 @@
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.utils import timezone
-
-
-def get_published_posts(queryset):
-    """Returns all published posts"""
-    return queryset.filter(
-        is_published=True,
-        category__is_published=True,
-        pub_date__lte=timezone.now()
-    )
 
 
 def count_comments(queryset):

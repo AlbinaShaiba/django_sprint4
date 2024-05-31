@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils import timezone
+
+from .managers import PublishedPostsManager
 
 
 User = get_user_model()
@@ -87,6 +90,12 @@ class Post(PublishedModel):
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
+
+
+    objects = models.Manager()
+
+    published_ordered_obj = PublishedPostsManager()
+
 
     def __str__(self):
         return self.title[:settings.TITLE_LEN]

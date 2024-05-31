@@ -6,10 +6,12 @@ from django.views.generic import (CreateView, DeleteView, DetailView,
                                   ListView, UpdateView)
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from .utils import count_comments, get_published_posts, paginate_queryset
+
+from .utils import count_comments, paginate_queryset
 from .models import Category, Comment, Post
 from .forms import CommentForm, PostForm
 from .mixins import CreateDeletePostMixin, CreateUpdateDeleteCommentMixin, OnlyAuthorMixin
+
 
 User = get_user_model()
 
@@ -23,30 +25,27 @@ class ProfileDetailView(DetailView):
     model = User
     template_name = 'blog/profile.html'
 
-    def get_object(self, queryset=None):
+    def get_object(self):
         return get_object_or_404(User,
                                  username=self.kwargs['username'])
 
-    def get_queryset(self, queryset=None):
+    def get_queryset(self):
         if self.request.user == self.get_object():
             page_obj = count_comments(
                 Post.objects.filter(
                     author=self.get_object().id).order_by('-pub_date'))
         else:
-            page_obj = count_comments(get_published_posts(
-                Post.objects.filter(
-                    author=self.get_object().id).order_by('-pub_date')))
+            page_obj = count_comments(Post.published_ordered_obj.all().filter(
+                    author=self.get_object().id))
 
-        page_obj = paginate_queryset(self.request,
-                                     page_obj,
-                                     settings.PAGINATION_PER_PAGE)
-        return page_obj
+        return paginate_queryset(self.request,
+                                page_obj,
+                                settings.PAGINATION_PER_PAGE)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['profile'] = self.get_object()
         context['page_obj'] = self.get_queryset()
-        context['user'] = self.request.user
         return context
 
 
@@ -73,20 +72,9 @@ class PostListView(ListView):
 
     model = Post
     template_name = 'blog/index.html'
-
+    paginate_by = 10
     def get_queryset(self):
-        page_obj = count_comments(get_published_posts(
-            Post.objects.order_by('-pub_date')))
-
-        return paginate_queryset(self.request,
-                                 page_obj,
-                                 settings.PAGINATION_PER_PAGE)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_obj'] = self.get_queryset()
-        return context
-
+        return count_comments(Post.published_ordered_obj.all())
 
 class CreatePostView(LoginRequiredMixin, CreateDeletePostMixin, CreateView):
     """CBV for creating posts"""
@@ -123,17 +111,14 @@ class PostDetailView(DetailView):
     pk_url_kwarg = 'post_id'
     template_name = 'blog/detail.html'
     
-    def get_form(self):
-        form = CommentForm(self.request.POST or None)
-        return form
 
     def get_object(self):
         post_for_user = get_object_or_404(Post, id=self.kwargs['post_id'])
         if self.request.user == post_for_user.author:
             post = post_for_user
         else:
-            post = get_object_or_404(get_published_posts(
-                Post.objects), id=self.kwargs['post_id'])
+            post = get_object_or_404(Post.published_ordered_obj.all(),
+                                    id=self.kwargs['post_id'])
         return post
 
     def get_queryset(self):
@@ -145,7 +130,7 @@ class PostDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['post'] = self.get_object()
         context['comments'] = self.get_queryset()
-        context['form'] = self.get_form()
+        context['form'] = CommentForm(self.request.POST or None)
         return context
 
 
@@ -163,11 +148,9 @@ class CategoryPostsView(ListView):
         return category
     
     def get_queryset(self):
-        page_obj = count_comments(
-            get_published_posts(Post.objects)
+        page_obj = count_comments(Post.published_ordered_obj.all()
             .select_related('category', 'location')
             .filter(category__slug=self.kwargs['category_slug'])
-            .order_by('-pub_date')
             )
         page_obj = paginate_queryset(self.request,
                                  page_obj,
@@ -224,7 +207,5 @@ class DeleteCommentView(LoginRequiredMixin, CreateUpdateDeleteCommentMixin,
 
     pk_url_kwarg = 'comment_id'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['comment'] = Comment.objects.get(pk=self.kwargs['comment_id'])
-        return context
+    def get_object(self):
+        return get_object_or_404(Comment, pk=self.kwargs['comment_id'])
