@@ -121,16 +121,12 @@ class PostDetailView(DetailView):
                                     id=self.kwargs['post_id'])
         return post
 
-    def get_queryset(self):
-        comments = (Comment.objects.filter(post=self.get_object()).
-                order_by('created_at'))
-        return comments
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['post'] = self.get_object()
-        context['comments'] = self.get_queryset()
         context['form'] = CommentForm(self.request.POST or None)
+        context['comments'] = self.get_object().comments.order_by('created_at')
         return context
 
 

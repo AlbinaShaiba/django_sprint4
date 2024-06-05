@@ -72,16 +72,19 @@ class Post(PublishedModel):
                                         'отложенные публикации.'))
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
-                               verbose_name='Автор публикации')
+                               verbose_name='Автор публикации',
+                               related_name='posts')
     location = models.ForeignKey(Location,
                                  on_delete=models.SET_NULL,
                                  verbose_name='Местоположение',
-                                 null=True)
+                                 null=True,
+                                 related_name='posts')
 
     category = models.ForeignKey(Category,
                                  on_delete=models.SET_NULL,
                                  null=True,
-                                 verbose_name='Категория')
+                                 verbose_name='Категория',
+                                 related_name='posts')
 
     image = models.ImageField('Изображение',
                               blank=True,
@@ -108,6 +111,7 @@ class Comment(models.Model):
                              max_length=settings.MAX_LENGTH)
     text = models.TextField('Текст комментария')
     author = models.ForeignKey(User,
+                               related_name='comments',
                                on_delete=models.CASCADE,
                                verbose_name='Автор комментария')
 
@@ -115,8 +119,7 @@ class Comment(models.Model):
                                       auto_now_add=True)
 
     post = models.ForeignKey(Post, related_name='comments',
-                             on_delete=models.CASCADE,
-                             null=True)
+                             on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'комментарий'
